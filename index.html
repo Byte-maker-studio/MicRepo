@@ -198,8 +198,8 @@ speaker or connected Bluetooth speaker.
 </p>
 
 <div class="warn">
-⚠️ Start with low volume. Do not place the phone near the
-speaker, as this can cause loud feedback.
+⚠️ Start with low volume. Keep the phone away from the
+speaker to prevent loud feedback.
 </div>
 
 <div class="card">
@@ -292,15 +292,13 @@ Audio settings apply when you press Start.
 
 <small>
 Requires HTTPS and microphone permission.
-For Bluetooth, connect your speaker in your phone's
-Bluetooth settings before pressing Start.
+Connect your Bluetooth speaker before pressing Start.
 </small>
 
 </div>
 
 <script>
 (() => {
-
 "use strict";
 
 const $ = id => document.getElementById(id);
@@ -313,7 +311,6 @@ const err = $("err");
 
 const gainEl = $("gain");
 const delayEl = $("delay");
-
 const inputSel = $("inputSel");
 const outputSel = $("outputSel");
 const outNote = $("outNote");
@@ -324,9 +321,6 @@ let source = null;
 let delayNode = null;
 let gainNode = null;
 let analyser = null;
-let mediaDestination = null;
-
-let outputAudio = null;
 
 let rafId = null;
 let running = false;
@@ -338,25 +332,32 @@ function setStatus(text, on) {
     dot.classList.toggle("on", !!on);
 }
 
-function supportsSinkSelection() {
-    return typeof HTMLMediaElement !== "undefined" &&
-           typeof HTMLMediaElement.prototype.setSinkId === "function";
+function supportsAudioContextSink() {
+    return !!(
+        window.AudioContext &&
+        AudioContext.prototype &&
+        typeof AudioContext.prototype.setSinkId === "function"
+    );
+}
+
+function supportsMediaSink() {
+    return !!(
+        window.HTMLMediaElement &&
+        HTMLMediaElement.prototype &&
+        typeof HTMLMediaElement.prototype.setSinkId === "function"
+    );
 }
 
 async function refreshDevices() {
-
     try {
-
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.enumerateDevices) {
+        if (!navigator.mediaDevices?.enumerateDevices) {
             return;
         }
 
-        const devices =
-            await navigator.mediaDevices.enumerateDevices();
+        const devices = await navigator.mediaDevices.enumerateDevices();
 
-        const keepIn = inputSel.value;
-        const keepOut = outputSel.value;
+        const oldInput = inputSel.value;
+        const oldOutput = outputSel.value;
 
         inputSel.innerHTML =
             '<option value="">Default microphone</option>';
@@ -365,107 +366,93 @@ async function refreshDevices() {
             '<option value="">Default output</option>';
 
         devices.forEach(device => {
-
-            if (device.kind === "audioinput" &&
+            if (
+                device.kind === "audioinput" &&
                 device.deviceId &&
-                device.deviceId !== "default") {
-
+                device.deviceId !== "default"
+            ) {
                 inputSel.add(new Option(
-                    device.label ||
-                    "Microphone " + inputSel.length,
+                    device.label || "Microphone",
                     device.deviceId
                 ));
             }
 
-            if (device.kind === "audiooutput" &&
+            if (
+                device.kind === "audiooutput" &&
                 device.deviceId &&
-                device.deviceId !== "default") {
-
+                device.deviceId !== "default"
+            ) {
                 outputSel.add(new Option(
-                    device.label ||
-                    "Output " + outputSel.length,
+                    device.label || "Audio output",
                     device.deviceId
                 ));
             }
-
         });
 
-        inputSel.value = keepIn;
-        outputSel.value = keepOut;
+        if ([...inputSel.options].some(o => o.value === oldInput)) {
+            inputSel.value = oldInput;
+        }
 
-        if (supportsSinkSelection()) {
+        if ([...outputSel.options].some(o => o.value === oldOutput)) {
+            outputSel.value = oldOutput;
+        }
 
+        if (supportsAudioContextSink()) {
             outNote.textContent =
-                "Your browser supports direct output selection.";
-
+                "This browser may allow direct output selection.";
+        } else if (supportsMediaSink()) {
+            outNote.textContent =
+                "Output selection is available through a media element.";
         } else {
-
             outNote.textContent =
-                "Bluetooth output is controlled by your phone. " +
-                "Connect the speaker before starting.";
+                "Your phone controls Bluetooth routing. " +
+                "The browser may not be able to select the speaker directly.";
         }
 
     } catch (e) {
-
         console.log("Device refresh error:", e);
     }
 }
 
 async function applySink() {
-
-    if (!outputAudio ||
-        !supportsSinkSelection()) {
-
-        return;
-    }
+    if (!ctx || !running) return;
 
     try {
-
-        await outputAudio.setSinkId(
-            outputSel.value || ""
-        );
-
-        err.textContent = "";
-
+        if (supportsAudioContextSink()) {
+            await ctx.setSinkId(outputSel.value || "");
+            err.textContent = "";
+        } else {
+            err.textContent =
+                "Direct output selection is not supported in this browser. " +
+                "Choose the Bluetooth speaker from Android settings.";
+        }
     } catch (e) {
-
-        err.textContent =
-            "Could not switch output: " + e.message;
+        err.textContent = "Could not select output: " + e.message;
     }
 }
 
 async function start() {
-
-    if (starting || running) {
-        return;
-    }
+    if (starting || running) return;
 
     starting = true;
     btn.disabled = true;
     err.textContent = "";
 
     try {
-
-        if (!navigator.mediaDevices ||
-            !navigator.mediaDevices.getUserMedia) {
-
+        if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error(
                 "Microphone access unavailable. Open this page using HTTPS."
             );
         }
 
-        const AC =
-            window.AudioContext ||
-            window.webkitAudioContext;
+        const AC = window.AudioContext || window.webkitAudioContext;
 
         if (!AC) {
             throw new Error("Web Audio API is unsupported.");
         }
 
         const constraints = {
-
             audio: {
-
                 deviceId: inputSel.value
                     ? { exact: inputSel.value }
                     : undefined,
@@ -473,119 +460,66 @@ async function start() {
                 echoCancellation: $("ec").checked,
                 noiseSuppression: $("ns").checked,
                 autoGainControl: $("agc").checked,
-
                 channelCount: 1
             },
-
             video: false
         };
 
-        // Request microphone access.
-
-        stream =
-            await navigator.mediaDevices.getUserMedia(
-                constraints
-            );
-
-        // Create audio context.
+        stream = await navigator.mediaDevices.getUserMedia(constraints);
 
         ctx = new AC({
             latencyHint: "interactive"
         });
 
-        if (ctx.state === "suspended") {
-            await ctx.resume();
-        }
+        await ctx.resume();
 
-        // Microphone input.
-
-        source =
-            ctx.createMediaStreamSource(stream);
-
-        // Adjustable delay.
+        source = ctx.createMediaStreamSource(stream);
 
         delayNode = ctx.createDelay(1.5);
-
         delayNode.delayTime.value =
             Number(delayEl.value) / 1000;
 
-        // Volume control.
-
         gainNode = ctx.createGain();
-
         gainNode.gain.value =
             Number(gainEl.value);
 
-        // Audio meter.
-
         analyser = ctx.createAnalyser();
-
         analyser.fftSize = 512;
 
-        // Connect the audio processing chain.
-
         source.connect(delayNode);
-
         delayNode.connect(gainNode);
-
         gainNode.connect(analyser);
 
         /*
          * IMPORTANT:
-         *
-         * On Android, use the AudioContext's normal output
-         * whenever direct Bluetooth routing is supported
-         * by the phone/browser.
-         *
-         * Some browsers support setSinkId(). Those browsers
-         * can use an audio element for selecting the output.
+         * Use the AudioContext's direct output.
+         * Avoid routing through an extra HTML audio element
+         * unless the browser requires it.
          */
 
-        if (supportsSinkSelection()) {
-
-            mediaDestination =
-                ctx.createMediaStreamDestination();
-
-            outputAudio = new Audio();
-
-            outputAudio.autoplay = true;
-            outputAudio.playsInline = true;
-
-            outputAudio.srcObject =
-                mediaDestination.stream;
-
-            gainNode.connect(mediaDestination);
-
-            await applySink();
-
-            await outputAudio.play();
-
-        } else {
-
-            // Android Bluetooth uses the phone's audio route.
-
-            gainNode.connect(ctx.destination);
-
+        if (supportsAudioContextSink() && outputSel.value) {
+            try {
+                await ctx.setSinkId(outputSel.value);
+            } catch (e) {
+                console.warn("Output selection failed:", e);
+            }
         }
 
-        // Refresh device labels after permission is granted.
+        analyser.connect(ctx.destination);
 
         await refreshDevices();
 
         running = true;
 
         btn.textContent = "Stop";
-
         btn.classList.add("live");
 
         setStatus("Live – listening", true);
 
         drawMeter();
-
-        keepAwake();
+        await keepAwake();
 
     } catch (e) {
-
         err.textContent =
             e.name === "NotAllowedError"
                 ? "Microphone permission denied. Allow microphone access."
@@ -594,14 +528,12 @@ async function start() {
         cleanup();
 
     } finally {
-
         starting = false;
         btn.disabled = false;
     }
 }
 
 function cleanup() {
-
     running = false;
 
     if (rafId !== null) {
@@ -609,27 +541,13 @@ function cleanup() {
     }
 
     rafId = null;
-
     meterBar.style.width = "0%";
 
-    if (outputAudio) {
-
-        outputAudio.pause();
-
-        outputAudio.srcObject = null;
-
-        outputAudio = null;
-    }
-
     if (stream) {
-
-        stream.getTracks().forEach(track => {
-            track.stop();
-        });
+        stream.getTracks().forEach(track => track.stop());
     }
 
     if (ctx) {
-
         ctx.close().catch(() => {});
     }
 
@@ -639,44 +557,29 @@ function cleanup() {
     delayNode = null;
     gainNode = null;
     analyser = null;
-    mediaDestination = null;
 
     btn.textContent = "Start";
-
     btn.classList.remove("live");
 
     setStatus("Stopped", false);
-
     releaseWake();
 }
 
 function drawMeter() {
+    if (!analyser) return;
 
-    if (!analyser) {
-        return;
-    }
-
-    const buffer =
-        new Uint8Array(analyser.fftSize);
+    const buffer = new Uint8Array(analyser.fftSize);
 
     function loop() {
-
-        if (!analyser || !running) {
-            return;
-        }
+        if (!analyser || !running) return;
 
         analyser.getByteTimeDomainData(buffer);
 
         let peak = 0;
 
         for (let i = 0; i < buffer.length; i++) {
-
-            const value =
-                Math.abs(buffer[i] - 128) / 128;
-
-            if (value > peak) {
-                peak = value;
-            }
+            const value = Math.abs(buffer[i] - 128) / 128;
+            if (value > peak) peak = value;
         }
 
         meterBar.style.width =
@@ -689,49 +592,31 @@ function drawMeter() {
 }
 
 async function keepAwake() {
-
     try {
-
         if ("wakeLock" in navigator) {
-
-            wakeLock =
-                await navigator.wakeLock.request("screen");
+            wakeLock = await navigator.wakeLock.request("screen");
         }
-
     } catch (e) {}
 }
 
 function releaseWake() {
-
     if (wakeLock) {
-
         wakeLock.release().catch(() => {});
-
         wakeLock = null;
     }
 }
 
-document.addEventListener(
-    "visibilitychange",
-    async () => {
+document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible" && running) {
+        await keepAwake();
 
-        if (document.visibilityState === "visible" &&
-            running) {
-
-            await keepAwake();
-
-            if (ctx && ctx.state === "suspended") {
-
-                await ctx.resume();
-            }
+        if (ctx && ctx.state === "suspended") {
+            await ctx.resume();
         }
     }
-);
-
-// Start / Stop.
+});
 
 btn.addEventListener("click", () => {
-
     if (running) {
         cleanup();
     } else {
@@ -739,15 +624,11 @@ btn.addEventListener("click", () => {
     }
 });
 
-// Volume.
-
 gainEl.addEventListener("input", () => {
-
     $("gainVal").textContent =
         Math.round(Number(gainEl.value) * 100) + "%";
 
-    if (gainNode) {
-
+    if (gainNode && ctx) {
         gainNode.gain.setTargetAtTime(
             Number(gainEl.value),
             ctx.currentTime,
@@ -756,15 +637,11 @@ gainEl.addEventListener("input", () => {
     }
 });
 
-// Delay.
-
 delayEl.addEventListener("input", () => {
-
     $("delayVal").textContent =
         delayEl.value + " ms";
 
-    if (delayNode) {
-
+    if (delayNode && ctx) {
         delayNode.delayTime.setTargetAtTime(
             Number(delayEl.value) / 1000,
             ctx.currentTime,
@@ -773,34 +650,21 @@ delayEl.addEventListener("input", () => {
     }
 });
 
-// Output selection.
-
 outputSel.addEventListener("change", applySink);
 
-// Microphone selection.
-
 inputSel.addEventListener("change", async () => {
-
     if (running) {
-
         cleanup();
-
         await start();
     }
 });
 
-// Refresh connected devices.
-
-if (navigator.mediaDevices &&
-    navigator.mediaDevices.addEventListener) {
-
+if (navigator.mediaDevices?.addEventListener) {
     navigator.mediaDevices.addEventListener(
         "devicechange",
         refreshDevices
     );
 }
-
-// Initial setup.
 
 refreshDevices();
 
