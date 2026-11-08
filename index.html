@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Mic Loopback</title>
+<meta name="theme-color" content="#0f1115">
+<title>Mic Loopback — Unlimited</title>
 
 <style>
 :root {
@@ -38,19 +39,20 @@ body {
 }
 
 h1 {
-    font-size: 22px;
-    margin: 8px 0 4px;
+    font-size: 23px;
+    margin: 8px 0 5px;
 }
 
-p.sub {
+.sub {
     margin: 0 0 18px;
     color: var(--muted);
     font-size: 14px;
-    line-height: 1.4;
+    line-height: 1.45;
 }
 
 .card {
     background: var(--card);
+    border: 1px solid #252a34;
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 14px;
@@ -58,11 +60,11 @@ p.sub {
 
 button.main {
     width: 100%;
-    padding: 18px;
+    padding: 17px;
     font-size: 18px;
-    font-weight: 600;
-    border: none;
-    border-radius: 14px;
+    font-weight: 700;
+    border: 0;
+    border-radius: 13px;
     background: var(--accent);
     color: white;
     cursor: pointer;
@@ -98,7 +100,7 @@ button:disabled {
 }
 
 .meter {
-    height: 10px;
+    height: 9px;
     border-radius: 6px;
     background: #262a33;
     overflow: hidden;
@@ -120,7 +122,7 @@ button:disabled {
 label {
     display: block;
     font-size: 14px;
-    margin-bottom: 6px;
+    margin-bottom: 7px;
 }
 
 .row {
@@ -151,7 +153,7 @@ select {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 6px 0;
+    padding: 7px 0;
     font-size: 15px;
 }
 
@@ -161,7 +163,7 @@ select {
     accent-color: var(--accent);
 }
 
-.warn {
+.note {
     background: #2a2216;
     border: 1px solid #5a4620;
     color: #f1c875;
@@ -177,11 +179,24 @@ select {
     font-size: 13px;
     margin-top: 10px;
     min-height: 16px;
+    line-height: 1.4;
 }
 
 small {
     color: var(--muted);
     line-height: 1.5;
+}
+
+.badge {
+    display: inline-block;
+    font-size: 11px;
+    color: #a9c7ff;
+    background: #202d45;
+    border: 1px solid #30476b;
+    border-radius: 20px;
+    padding: 4px 8px;
+    margin-left: 6px;
+    vertical-align: middle;
 }
 </style>
 </head>
@@ -190,16 +205,15 @@ small {
 
 <div class="wrap">
 
-<h1>🎙️ Mic Loopback</h1>
+<h1>🎙️ Mic Loopback <span class="badge">UNLIMITED</span></h1>
 
 <p class="sub">
-Whatever your microphone hears plays through your phone
-speaker or connected Bluetooth speaker.
+Hear your microphone live through your device's audio output.
 </p>
 
-<div class="warn">
-⚠️ Start with low volume. Keep the phone away from the
-speaker to prevent loud feedback.
+<div class="note">
+⚠️ Start with low volume. Keep the microphone away from
+the speaker to avoid loud feedback.
 </div>
 
 <div class="card">
@@ -215,7 +229,7 @@ speaker to prevent loud feedback.
 <div id="meterBar"></div>
 </div>
 
-<div class="err" id="err"></div>
+<div class="err" id="err" role="status"></div>
 
 </div>
 
@@ -267,7 +281,9 @@ value="0">
 <option value="">Default output</option>
 </select>
 
-<small id="outNote"></small>
+<small id="outNote">
+Connect your Bluetooth speaker in Android settings before starting.
+</small>
 
 <div class="toggle" style="margin-top:12px">
 <span>Echo cancellation</span>
@@ -285,14 +301,14 @@ value="0">
 </div>
 
 <small>
-Audio settings apply when you press Start.
+Settings are used when you start the microphone.
 </small>
 
 </div>
 
 <small>
-Requires HTTPS and microphone permission.
-Connect your Bluetooth speaker before pressing Start.
+No session countdown or one-minute timer is included.
+Browser and Android audio routing limitations may still apply.
 </small>
 
 </div>
@@ -321,29 +337,26 @@ let source = null;
 let delayNode = null;
 let gainNode = null;
 let analyser = null;
-
 let rafId = null;
 let running = false;
 let starting = false;
 let wakeLock = null;
 
-function setStatus(text, on) {
+function status(text, on) {
     statusText.textContent = text;
     dot.classList.toggle("on", !!on);
 }
 
-function supportsAudioContextSink() {
+function audioContextSinkSupported() {
     return !!(
         window.AudioContext &&
-        AudioContext.prototype &&
         typeof AudioContext.prototype.setSinkId === "function"
     );
 }
 
-function supportsMediaSink() {
+function mediaSinkSupported() {
     return !!(
         window.HTMLMediaElement &&
-        HTMLMediaElement.prototype &&
         typeof HTMLMediaElement.prototype.setSinkId === "function"
     );
 }
@@ -354,10 +367,11 @@ async function refreshDevices() {
             return;
         }
 
-        const devices = await navigator.mediaDevices.enumerateDevices();
+        const devices =
+            await navigator.mediaDevices.enumerateDevices();
 
-        const oldInput = inputSel.value;
-        const oldOutput = outputSel.value;
+        const inKeep = inputSel.value;
+        const outKeep = outputSel.value;
 
         inputSel.innerHTML =
             '<option value="">Default microphone</option>';
@@ -365,69 +379,51 @@ async function refreshDevices() {
         outputSel.innerHTML =
             '<option value="">Default output</option>';
 
-        devices.forEach(device => {
+        devices.forEach(d => {
             if (
-                device.kind === "audioinput" &&
-                device.deviceId &&
-                device.deviceId !== "default"
+                d.kind === "audioinput" &&
+                d.deviceId &&
+                d.deviceId !== "default"
             ) {
                 inputSel.add(new Option(
-                    device.label || "Microphone",
-                    device.deviceId
+                    d.label || "Microphone",
+                    d.deviceId
                 ));
             }
 
             if (
-                device.kind === "audiooutput" &&
-                device.deviceId &&
-                device.deviceId !== "default"
+                d.kind === "audiooutput" &&
+                d.deviceId &&
+                d.deviceId !== "default"
             ) {
                 outputSel.add(new Option(
-                    device.label || "Audio output",
-                    device.deviceId
+                    d.label || "Audio output",
+                    d.deviceId
                 ));
             }
         });
 
-        if ([...inputSel.options].some(o => o.value === oldInput)) {
-            inputSel.value = oldInput;
+        if ([...inputSel.options].some(o => o.value === inKeep)) {
+            inputSel.value = inKeep;
         }
 
-        if ([...outputSel.options].some(o => o.value === oldOutput)) {
-            outputSel.value = oldOutput;
+        if ([...outputSel.options].some(o => o.value === outKeep)) {
+            outputSel.value = outKeep;
         }
 
-        if (supportsAudioContextSink()) {
+        if (audioContextSinkSupported()) {
             outNote.textContent =
-                "This browser may allow direct output selection.";
-        } else if (supportsMediaSink()) {
+                "Direct output selection may be available in this browser.";
+        } else if (mediaSinkSupported()) {
             outNote.textContent =
-                "Output selection is available through a media element.";
+                "This browser may support output selection for media elements.";
         } else {
             outNote.textContent =
-                "Your phone controls Bluetooth routing. " +
-                "The browser may not be able to select the speaker directly.";
+                "Android controls Bluetooth routing. Select the speaker in your phone's Bluetooth/audio panel.";
         }
 
     } catch (e) {
-        console.log("Device refresh error:", e);
-    }
-}
-
-async function applySink() {
-    if (!ctx || !running) return;
-
-    try {
-        if (supportsAudioContextSink()) {
-            await ctx.setSinkId(outputSel.value || "");
-            err.textContent = "";
-        } else {
-            err.textContent =
-                "Direct output selection is not supported in this browser. " +
-                "Choose the Bluetooth speaker from Android settings.";
-        }
-    } catch (e) {
-        err.textContent = "Could not select output: " + e.message;
+        console.warn("Device listing:", e);
     }
 }
 
@@ -441,31 +437,36 @@ async function start() {
     try {
         if (!navigator.mediaDevices?.getUserMedia) {
             throw new Error(
-                "Microphone access unavailable. Open this page using HTTPS."
+                "Microphone access requires a secure HTTPS page."
             );
         }
 
-        const AC = window.AudioContext || window.webkitAudioContext;
+        const AC =
+            window.AudioContext ||
+            window.webkitAudioContext;
 
         if (!AC) {
-            throw new Error("Web Audio API is unsupported.");
+            throw new Error("Web Audio is not supported.");
         }
 
-        const constraints = {
-            audio: {
-                deviceId: inputSel.value
-                    ? { exact: inputSel.value }
-                    : undefined,
-
-                echoCancellation: $("ec").checked,
-                noiseSuppression: $("ns").checked,
-                autoGainControl: $("agc").checked,
-                channelCount: 1
-            },
-            video: false
+        const audio = {
+            echoCancellation: $("ec").checked,
+            noiseSuppression: $("ns").checked,
+            autoGainControl: $("agc").checked,
+            channelCount: 1
         };
 
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
+        if (inputSel.value) {
+            audio.deviceId = {
+                exact: inputSel.value
+            };
+        }
+
+        stream =
+            await navigator.mediaDevices.getUserMedia({
+                audio,
+                video: false
+            });
 
         ctx = new AC({
             latencyHint: "interactive"
@@ -476,14 +477,17 @@ async function start() {
         source = ctx.createMediaStreamSource(stream);
 
         delayNode = ctx.createDelay(1.5);
+
         delayNode.delayTime.value =
             Number(delayEl.value) / 1000;
 
         gainNode = ctx.createGain();
+
         gainNode.gain.value =
             Number(gainEl.value);
 
         analyser = ctx.createAnalyser();
+
         analyser.fftSize = 512;
 
         source.connect(delayNode);
@@ -491,13 +495,11 @@ async function start() {
         gainNode.connect(analyser);
 
         /*
-         * IMPORTANT:
-         * Use the AudioContext's direct output.
-         * Avoid routing through an extra HTML audio element
-         * unless the browser requires it.
+         * Use direct AudioContext output.
+         * Try selecting the chosen output if the browser supports it.
          */
 
-        if (supportsAudioContextSink() && outputSel.value) {
+        if (audioContextSinkSupported() && outputSel.value) {
             try {
                 await ctx.setSinkId(outputSel.value);
             } catch (e) {
@@ -507,23 +509,23 @@ async function start() {
 
         analyser.connect(ctx.destination);
 
-        await refreshDevices();
-
         running = true;
 
         btn.textContent = "Stop";
         btn.classList.add("live");
 
-        setStatus("Live – listening", true);
+        status("Live — listening", true);
 
         drawMeter();
+
         await keepAwake();
+        await refreshDevices();
 
     } catch (e) {
         err.textContent =
             e.name === "NotAllowedError"
-                ? "Microphone permission denied. Allow microphone access."
-                : "Error: " + e.message;
+                ? "Microphone permission denied. Allow microphone access in browser settings."
+                : "Could not start: " + e.message;
 
         cleanup();
 
@@ -541,10 +543,11 @@ function cleanup() {
     }
 
     rafId = null;
+
     meterBar.style.width = "0%";
 
     if (stream) {
-        stream.getTracks().forEach(track => track.stop());
+        stream.getTracks().forEach(t => t.stop());
     }
 
     if (ctx) {
@@ -561,32 +564,36 @@ function cleanup() {
     btn.textContent = "Start";
     btn.classList.remove("live");
 
-    setStatus("Stopped", false);
+    status("Stopped", false);
+
     releaseWake();
 }
 
 function drawMeter() {
     if (!analyser) return;
 
-    const buffer = new Uint8Array(analyser.fftSize);
+    const data =
+        new Uint8Array(analyser.fftSize);
 
-    function loop() {
+    const loop = () => {
         if (!analyser || !running) return;
 
-        analyser.getByteTimeDomainData(buffer);
+        analyser.getByteTimeDomainData(data);
 
         let peak = 0;
 
-        for (let i = 0; i < buffer.length; i++) {
-            const value = Math.abs(buffer[i] - 128) / 128;
-            if (value > peak) peak = value;
+        for (let i = 0; i < data.length; i++) {
+            peak = Math.max(
+                peak,
+                Math.abs(data[i] - 128) / 128
+            );
         }
 
         meterBar.style.width =
             Math.min(100, peak * 140) + "%";
 
         rafId = requestAnimationFrame(loop);
-    }
+    };
 
     loop();
 }
@@ -594,7 +601,8 @@ function drawMeter() {
 async function keepAwake() {
     try {
         if ("wakeLock" in navigator) {
-            wakeLock = await navigator.wakeLock.request("screen");
+            wakeLock =
+                await navigator.wakeLock.request("screen");
         }
     } catch (e) {}
 }
@@ -605,16 +613,6 @@ function releaseWake() {
         wakeLock = null;
     }
 }
-
-document.addEventListener("visibilitychange", async () => {
-    if (document.visibilityState === "visible" && running) {
-        await keepAwake();
-
-        if (ctx && ctx.state === "suspended") {
-            await ctx.resume();
-        }
-    }
-});
 
 btn.addEventListener("click", () => {
     if (running) {
@@ -650,7 +648,25 @@ delayEl.addEventListener("input", () => {
     }
 });
 
-outputSel.addEventListener("change", applySink);
+outputSel.addEventListener("change", async () => {
+    if (
+        ctx &&
+        running &&
+        audioContextSinkSupported() &&
+        outputSel.value
+    ) {
+        try {
+            await ctx.setSinkId(outputSel.value);
+            err.textContent = "";
+        } catch (e) {
+            err.textContent =
+                "Unable to select that output: " + e.message;
+        }
+    } else if (!audioContextSinkSupported()) {
+        outNote.textContent =
+            "This browser cannot force the output device. Choose your Bluetooth speaker from Android's audio output panel.";
+    }
+});
 
 inputSel.addEventListener("change", async () => {
     if (running) {
@@ -665,6 +681,16 @@ if (navigator.mediaDevices?.addEventListener) {
         refreshDevices
     );
 }
+
+document.addEventListener("visibilitychange", async () => {
+    if (document.visibilityState === "visible" && running) {
+        await keepAwake();
+
+        if (ctx && ctx.state === "suspended") {
+            await ctx.resume();
+        }
+    }
+});
 
 refreshDevices();
 
