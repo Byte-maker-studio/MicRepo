@@ -2,10 +2,11 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Mic Loopback</title>
+
 <style>
-  :root {
+:root {
     --bg: #0f1115;
     --card: #1a1d24;
     --text: #eef0f4;
@@ -13,28 +14,49 @@
     --accent: #4f8cff;
     --stop: #ff5a5f;
     --ok: #3ddc97;
-  }
-  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
-  body {
+}
+
+* {
+    box-sizing: border-box;
+    -webkit-tap-highlight-color: transparent;
+}
+
+body {
     margin: 0;
     min-height: 100vh;
     background: var(--bg);
     color: var(--text);
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: Arial, sans-serif;
     display: flex;
     justify-content: center;
     padding: 20px 16px 40px;
-  }
-  .wrap { width: 100%; max-width: 440px; }
-  h1 { font-size: 22px; margin: 8px 0 4px; }
-  p.sub { margin: 0 0 18px; color: var(--muted); font-size: 14px; line-height: 1.4; }
-  .card {
+}
+
+.wrap {
+    width: 100%;
+    max-width: 440px;
+}
+
+h1 {
+    font-size: 22px;
+    margin: 8px 0 4px;
+}
+
+p.sub {
+    margin: 0 0 18px;
+    color: var(--muted);
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+.card {
     background: var(--card);
     border-radius: 16px;
     padding: 16px;
     margin-bottom: 14px;
-  }
-  button.main {
+}
+
+button.main {
     width: 100%;
     padding: 18px;
     font-size: 18px;
@@ -42,249 +64,636 @@
     border: none;
     border-radius: 14px;
     background: var(--accent);
-    color: #fff;
+    color: white;
     cursor: pointer;
-  }
-  button.main.live { background: var(--stop); }
-  .status {
-    display: flex; align-items: center; gap: 8px;
-    margin-top: 12px; font-size: 14px; color: var(--muted);
-  }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--muted); }
-  .dot.on { background: var(--ok); box-shadow: 0 0 8px var(--ok); }
-  .meter {
-    height: 10px; border-radius: 6px; background: #262a33; overflow: hidden; margin-top: 14px;
-  }
-  .meter > div {
-    height: 100%; width: 0%;
+}
+
+button.main.live {
+    background: var(--stop);
+}
+
+.status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--muted);
+}
+
+.dot.on {
+    background: var(--ok);
+    box-shadow: 0 0 8px var(--ok);
+}
+
+.meter {
+    height: 10px;
+    border-radius: 6px;
+    background: #262a33;
+    overflow: hidden;
+    margin-top: 14px;
+}
+
+.meter > div {
+    height: 100%;
+    width: 0%;
     background: linear-gradient(90deg, var(--ok), #ffd166, var(--stop));
     transition: width 60ms linear;
-  }
-  label { display: block; font-size: 14px; margin-bottom: 6px; }
-  .row { display: flex; justify-content: space-between; color: var(--muted); font-size: 13px; }
-  input[type=range] { width: 100%; accent-color: var(--accent); margin: 6px 0 14px; }
-  select {
-    width: 100%; padding: 12px; border-radius: 10px; border: 1px solid #2c313c;
-    background: #11141a; color: var(--text); font-size: 15px; margin-bottom: 14px;
-  }
-  .toggle { display: flex; align-items: center; justify-content: space-between; padding: 6px 0; font-size: 15px; }
-  .toggle input { width: 22px; height: 22px; accent-color: var(--accent); }
-  .warn {
-    background: #2a2216; border: 1px solid #5a4620; color: #f1c875;
-    border-radius: 12px; padding: 12px 14px; font-size: 13px; line-height: 1.45; margin-bottom: 14px;
-  }
-  .err { color: var(--stop); font-size: 13px; margin-top: 10px; min-height: 16px; }
-  small { color: var(--muted); }
+}
+
+label {
+    display: block;
+    font-size: 14px;
+    margin-bottom: 6px;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+input[type=range] {
+    width: 100%;
+    accent-color: var(--accent);
+    margin: 6px 0 14px;
+}
+
+select {
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: 1px solid #2c313c;
+    background: #11141a;
+    color: var(--text);
+    font-size: 15px;
+    margin-bottom: 14px;
+}
+
+.toggle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 15px;
+}
+
+.toggle input {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--accent);
+}
+
+.warn {
+    background: #2a2216;
+    border: 1px solid #5a4620;
+    color: #f1c875;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    margin-bottom: 14px;
+}
+
+.err {
+    color: var(--stop);
+    font-size: 13px;
+    margin-top: 10px;
+    min-height: 16px;
+}
+
+small {
+    color: var(--muted);
+}
 </style>
 </head>
+
 <body>
+
 <div class="wrap">
-  <h1>🎙️ Mic Loopback</h1>
-  <p class="sub">Whatever the mic hears plays back through your phone speaker or connected Bluetooth device.</p>
 
-  <div class="warn">
-    ⚠️ Using the phone's own speaker with its own mic causes loud feedback (squealing). Use headphones or a Bluetooth speaker kept away from the phone, and start with the volume low.
-  </div>
+<h1>🎙️ Mic Loopback</h1>
 
-  <div class="card">
-    <button id="toggleBtn" class="main">Start</button>
-    <div class="status"><span id="dot" class="dot"></span><span id="statusText">Stopped</span></div>
-    <div class="meter"><div id="meterBar"></div></div>
-    <div class="err" id="err"></div>
-  </div>
+<p class="sub">
+Whatever the mic hears plays back through your phone speaker
+or connected Bluetooth device.
+</p>
 
-  <div class="card">
-    <label for="gain">Volume</label>
-    <input id="gain" type="range" min="0" max="3" step="0.05" value="1">
-    <div class="row"><span>Mute</span><span id="gainVal">100%</span><span>300%</span></div>
+<div class="warn">
+⚠️ Using the phone's own speaker with its own mic can cause loud
+feedback. Use headphones or a Bluetooth speaker kept away from
+the phone. Start with low volume.
+</div>
 
-    <label for="delay" style="margin-top:14px">Delay</label>
-    <input id="delay" type="range" min="0" max="1000" step="10" value="0">
-    <div class="row"><span>0 ms</span><span id="delayVal">0 ms</span><span>1000 ms</span></div>
-  </div>
+<div class="card">
 
-  <div class="card">
-    <label for="inputSel">Microphone</label>
-    <select id="inputSel"><option value="">Default microphone</option></select>
+<button id="toggleBtn" class="main">Start</button>
 
-    <label for="outputSel">Output device</label>
-    <select id="outputSel"><option value="">Default output</option></select>
-    <small id="outNote"></small>
+<div class="status">
+<span id="dot" class="dot"></span>
+<span id="statusText">Stopped</span>
+</div>
 
-    <div class="toggle" style="margin-top:12px"><span>Echo cancellation</span><input type="checkbox" id="ec" checked></div>
-    <div class="toggle"><span>Noise suppression</span><input type="checkbox" id="ns"></div>
-    <div class="toggle"><span>Auto gain control</span><input type="checkbox" id="agc"></div>
-    <small>Changes apply the next time you press Start.</small>
-  </div>
+<div class="meter">
+<div id="meterBar"></div>
+</div>
 
-  <small>Needs HTTPS (or localhost) and microphone permission. Bluetooth output follows your phone's system audio route.</small>
+<div class="err" id="err"></div>
+
+</div>
+
+<div class="card">
+
+<label for="gain">Volume</label>
+
+<input id="gain" type="range"
+min="0" max="3" step="0.05" value="1">
+
+<div class="row">
+<span>Mute</span>
+<span id="gainVal">100%</span>
+<span>300%</span>
+</div>
+
+<label for="delay" style="margin-top:14px">Delay</label>
+
+<input id="delay" type="range"
+min="0" max="1000" step="10" value="0">
+
+<div class="row">
+<span>0 ms</span>
+<span id="delayVal">0 ms</span>
+<span>1000 ms</span>
+</div>
+
+</div>
+
+<div class="card">
+
+<label for="inputSel">Microphone</label>
+
+<select id="inputSel">
+<option value="">Default microphone</option>
+</select>
+
+<label for="outputSel">Output device</label>
+
+<select id="outputSel">
+<option value="">Default output</option>
+</select>
+
+<small id="outNote"></small>
+
+<div class="toggle" style="margin-top:12px">
+<span>Echo cancellation</span>
+<input type="checkbox" id="ec" checked>
+</div>
+
+<div class="toggle">
+<span>Noise suppression</span>
+<input type="checkbox" id="ns">
+</div>
+
+<div class="toggle">
+<span>Auto gain control</span>
+<input type="checkbox" id="agc">
+</div>
+
+<small>
+Changes apply the next time you press Start.
+</small>
+
+</div>
+
+<small>
+Needs HTTPS (or localhost) and microphone permission.
+Bluetooth output follows your phone's system audio route
+when direct output selection is unsupported.
+</small>
+
 </div>
 
 <script>
 (() => {
-  const $ = id => document.getElementById(id);
-  const btn = $('toggleBtn'), dot = $('dot'), statusText = $('statusText');
-  const meterBar = $('meterBar'), err = $('err');
-  const gainEl = $('gain'), delayEl = $('delay');
-  const inputSel = $('inputSel'), outputSel = $('outputSel'), outNote = $('outNote');
 
-  let ctx = null, stream = null, source = null, delayNode = null, gainNode = null, analyser = null;
-  let rafId = null, running = false;
+const $ = id => document.getElementById(id);
 
-  function setStatus(text, on) {
+const btn = $('toggleBtn');
+const dot = $('dot');
+const statusText = $('statusText');
+const meterBar = $('meterBar');
+const err = $('err');
+
+const gainEl = $('gain');
+const delayEl = $('delay');
+
+const inputSel = $('inputSel');
+const outputSel = $('outputSel');
+const outNote = $('outNote');
+
+let ctx = null;
+let stream = null;
+let source = null;
+let delayNode = null;
+let gainNode = null;
+let analyser = null;
+let mediaDestination = null;
+
+let rafId = null;
+let running = false;
+let starting = false;
+
+const outputAudio = new Audio();
+
+outputAudio.autoplay = true;
+outputAudio.playsInline = true;
+
+function setStatus(text, on) {
     statusText.textContent = text;
     dot.classList.toggle('on', !!on);
-  }
+}
 
-  async function refreshDevices() {
+async function refreshDevices() {
     try {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const keepIn = inputSel.value, keepOut = outputSel.value;
-      inputSel.innerHTML = '<option value="">Default microphone</option>';
-      outputSel.innerHTML = '<option value="">Default output</option>';
-      devices.forEach(d => {
-        if (d.kind === 'audioinput' && d.deviceId && d.deviceId !== 'default') {
-          const o = new Option(d.label || 'Microphone ' + (inputSel.length), d.deviceId);
-          inputSel.add(o);
-        } else if (d.kind === 'audiooutput' && d.deviceId && d.deviceId !== 'default') {
-          const o = new Option(d.label || 'Output ' + (outputSel.length), d.deviceId);
-          outputSel.add(o);
+        if (!navigator.mediaDevices?.enumerateDevices) {
+            return;
         }
-      });
-      inputSel.value = keepIn; outputSel.value = keepOut;
-      const canSink = ctx ? typeof ctx.setSinkId === 'function' : ('setSinkId' in AudioContext.prototype);
-      outNote.textContent = (canSink && outputSel.length > 1)
-        ? '' : 'Output picker not supported here. Audio uses your phone\u2019s current route (speaker or Bluetooth).';
-    } catch (e) { /* ignore */ }
-  }
 
-  async function applySink() {
-    if (!ctx) return;
-    const id = outputSel.value || '';
-    if (typeof ctx.setSinkId === 'function') {
-      try { await ctx.setSinkId(id); } catch (e) { err.textContent = 'Could not switch output: ' + e.message; }
-    }
-  }
+        const devices = await navigator.mediaDevices.enumerateDevices();
 
-  async function start() {
-    err.textContent = '';
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      err.textContent = 'Microphone access is unavailable. Open this page over HTTPS or localhost.';
-      return;
-    }
-    try {
-      const constraints = {
-        audio: {
-          deviceId: inputSel.value ? { exact: inputSel.value } : undefined,
-          echoCancellation: $('ec').checked,
-          noiseSuppression: $('ns').checked,
-          autoGainControl: $('agc').checked,
-          channelCount: 1,
-          latency: 0
-        },
-        video: false
-      };
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
+        const keepIn = inputSel.value;
+        const keepOut = outputSel.value;
 
-      const AC = window.AudioContext || window.webkitAudioContext;
-      ctx = new AC({ latencyHint: 'interactive' });
-      if (ctx.state === 'suspended') await ctx.resume();
+        inputSel.innerHTML =
+            '<option value="">Default microphone</option>';
 
-      source = ctx.createMediaStreamSource(stream);
-      delayNode = ctx.createDelay(1.5);
-      delayNode.delayTime.value = delayEl.value / 1000;
-      gainNode = ctx.createGain();
-      gainNode.gain.value = parseFloat(gainEl.value);
-      analyser = ctx.createAnalyser();
-      analyser.fftSize = 512;
+        outputSel.innerHTML =
+            '<option value="">Default output</option>';
 
-      source.connect(delayNode);
-      delayNode.connect(gainNode);
-      gainNode.connect(ctx.destination);
-      gainNode.connect(analyser);
+        devices.forEach(d => {
 
-      await applySink();
-      await refreshDevices(); // labels become available after permission
+            if (d.kind === 'audioinput' &&
+                d.deviceId &&
+                d.deviceId !== 'default') {
 
-      running = true;
-      btn.textContent = 'Stop';
-      btn.classList.add('live');
-      setStatus('Live \u2013 listening', true);
-      drawMeter();
-      keepAwake();
+                const option = new Option(
+                    d.label || 'Microphone ' + inputSel.length,
+                    d.deviceId
+                );
+
+                inputSel.add(option);
+            }
+
+            if (d.kind === 'audiooutput' &&
+                d.deviceId &&
+                d.deviceId !== 'default') {
+
+                const option = new Option(
+                    d.label || 'Output ' + outputSel.length,
+                    d.deviceId
+                );
+
+                outputSel.add(option);
+            }
+        });
+
+        inputSel.value = keepIn;
+        outputSel.value = keepOut;
+
+        if (typeof outputAudio.setSinkId === 'function') {
+
+            outNote.textContent =
+                'Your browser supports output selection.';
+
+        } else {
+
+            outNote.textContent =
+                'Direct output selection is unsupported. ' +
+                'Connect Bluetooth before pressing Start.';
+        }
+
     } catch (e) {
-      err.textContent = e.name === 'NotAllowedError'
-        ? 'Microphone permission was denied. Allow it in your browser settings and try again.'
-        : 'Error: ' + e.message;
-      cleanup();
+        console.log('Device refresh error:', e);
     }
-  }
+}
 
-  function cleanup() {
+async function applySink() {
+
+    const id = outputSel.value || '';
+
+    if (typeof outputAudio.setSinkId === 'function') {
+
+        try {
+            await outputAudio.setSinkId(id);
+            err.textContent = '';
+
+        } catch (e) {
+
+            err.textContent =
+                'Could not switch output: ' + e.message;
+        }
+
+    } else {
+
+        outNote.textContent =
+            'Use your phone Bluetooth settings to select the speaker.';
+    }
+}
+
+async function start() {
+
+    if (starting || running) return;
+
+    starting = true;
+    err.textContent = '';
+
+    if (!navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia) {
+
+        err.textContent =
+            'Microphone access unavailable. Open this page using HTTPS.';
+
+        starting = false;
+        return;
+    }
+
+    try {
+
+        const AC = window.AudioContext ||
+                   window.webkitAudioContext;
+
+        if (!AC) {
+            throw new Error('Web Audio API is unsupported.');
+        }
+
+        const constraints = {
+
+            audio: {
+
+                deviceId: inputSel.value
+                    ? { exact: inputSel.value }
+                    : undefined,
+
+                echoCancellation: $('ec').checked,
+                noiseSuppression: $('ns').checked,
+                autoGainControl: $('agc').checked,
+
+                channelCount: 1
+            },
+
+            video: false
+        };
+
+        stream = await navigator.mediaDevices.getUserMedia(
+            constraints
+        );
+
+        ctx = new AC({
+            latencyHint: 'interactive'
+        });
+
+        if (ctx.state === 'suspended') {
+            await ctx.resume();
+        }
+
+        source = ctx.createMediaStreamSource(stream);
+
+        delayNode = ctx.createDelay(1.5);
+
+        delayNode.delayTime.value =
+            Number(delayEl.value) / 1000;
+
+        gainNode = ctx.createGain();
+
+        gainNode.gain.value =
+            Number(gainEl.value);
+
+        analyser = ctx.createAnalyser();
+
+        analyser.fftSize = 512;
+
+        mediaDestination =
+            ctx.createMediaStreamDestination();
+
+        source.connect(delayNode);
+
+        delayNode.connect(gainNode);
+
+        gainNode.connect(mediaDestination);
+
+        gainNode.connect(analyser);
+
+        outputAudio.srcObject =
+            mediaDestination.stream;
+
+        await applySink();
+
+        await outputAudio.play();
+
+        await refreshDevices();
+
+        running = true;
+
+        btn.textContent = 'Stop';
+
+        btn.classList.add('live');
+
+        setStatus('Live – listening', true);
+
+        drawMeter();
+
+        keepAwake();
+
+    } catch (e) {
+
+        err.textContent =
+            e.name === 'NotAllowedError'
+                ? 'Microphone permission denied. Allow microphone access.'
+                : 'Error: ' + e.message;
+
+        cleanup();
+
+    } finally {
+
+        starting = false;
+    }
+}
+
+function cleanup() {
+
     running = false;
-    if (rafId) cancelAnimationFrame(rafId);
-    rafId = null;
-    meterBar.style.width = '0%';
-    if (stream) stream.getTracks().forEach(t => t.stop());
-    if (ctx) ctx.close().catch(() => {});
-    stream = ctx = source = delayNode = gainNode = analyser = null;
-    btn.textContent = 'Start';
-    btn.classList.remove('live');
-    setStatus('Stopped', false);
-    releaseWake();
-  }
 
-  function drawMeter() {
-    if (!analyser) return;
-    const buf = new Uint8Array(analyser.fftSize);
-    const loop = () => {
-      if (!analyser) return;
-      analyser.getByteTimeDomainData(buf);
-      let peak = 0;
-      for (let i = 0; i < buf.length; i++) {
-        const v = Math.abs(buf[i] - 128) / 128;
-        if (v > peak) peak = v;
-      }
-      meterBar.style.width = Math.min(100, peak * 140) + '%';
-      rafId = requestAnimationFrame(loop);
-    };
-    loop();
-  }
-
-  // Keep screen on so the phone doesn't suspend audio
-  let wakeLock = null;
-  async function keepAwake() {
-    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
-  }
-  function releaseWake() {
-    try { if (wakeLock) wakeLock.release(); } catch (e) {}
-    wakeLock = null;
-  }
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible' && running) {
-      keepAwake();
-      if (ctx && ctx.state === 'suspended') ctx.resume();
+    if (rafId !== null) {
+        cancelAnimationFrame(rafId);
     }
-  });
 
-  btn.addEventListener('click', () => running ? cleanup() : start());
+    rafId = null;
 
-  gainEl.addEventListener('input', () => {
-    $('gainVal').textContent = Math.round(gainEl.value * 100) + '%';
-    if (gainNode) gainNode.gain.value = parseFloat(gainEl.value);
-  });
-  delayEl.addEventListener('input', () => {
-    $('delayVal').textContent = delayEl.value + ' ms';
-    if (delayNode) delayNode.delayTime.value = delayEl.value / 1000;
-  });
-  outputSel.addEventListener('change', applySink);
-  inputSel.addEventListener('change', () => { if (running) { cleanup(); start(); } });
+    meterBar.style.width = '0%';
 
-  if (navigator.mediaDevices && navigator.mediaDevices.addEventListener) {
-    navigator.mediaDevices.addEventListener('devicechange', refreshDevices);
-  }
-  refreshDevices();
+    outputAudio.pause();
+
+    outputAudio.srcObject = null;
+
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+
+    if (ctx) {
+        ctx.close().catch(() => {});
+    }
+
+    stream = null;
+    ctx = null;
+    source = null;
+    delayNode = null;
+    gainNode = null;
+    analyser = null;
+    mediaDestination = null;
+
+    btn.textContent = 'Start';
+
+    btn.classList.remove('live');
+
+    setStatus('Stopped', false);
+
+    releaseWake();
+}
+
+function drawMeter() {
+
+    if (!analyser) return;
+
+    const buf = new Uint8Array(analyser.fftSize);
+
+    function loop() {
+
+        if (!analyser || !running) return;
+
+        analyser.getByteTimeDomainData(buf);
+
+        let peak = 0;
+
+        for (let i = 0; i < buf.length; i++) {
+
+            const v = Math.abs(buf[i] - 128) / 128;
+
+            if (v > peak) {
+                peak = v;
+            }
+        }
+
+        meterBar.style.width =
+            Math.min(100, peak * 140) + '%';
+
+        rafId = requestAnimationFrame(loop);
+    }
+
+    loop();
+}
+
+let wakeLock = null;
+
+async function keepAwake() {
+
+    try {
+
+        if ('wakeLock' in navigator) {
+
+            wakeLock = await navigator.wakeLock.request(
+                'screen'
+            );
+        }
+
+    } catch (e) {}
+}
+
+function releaseWake() {
+
+    try {
+
+        if (wakeLock) {
+            wakeLock.release();
+        }
+
+    } catch (e) {}
+
+    wakeLock = null;
+}
+
+document.addEventListener('visibilitychange', () => {
+
+    if (document.visibilityState === 'visible' && running) {
+
+        keepAwake();
+
+        if (ctx && ctx.state === 'suspended') {
+            ctx.resume();
+        }
+    }
+});
+
+btn.addEventListener('click', () => {
+
+    if (running) {
+        cleanup();
+    } else {
+        start();
+    }
+});
+
+gainEl.addEventListener('input', () => {
+
+    $('gainVal').textContent =
+        Math.round(Number(gainEl.value) * 100) + '%';
+
+    if (gainNode) {
+        gainNode.gain.value = Number(gainEl.value);
+    }
+});
+
+delayEl.addEventListener('input', () => {
+
+    $('delayVal').textContent =
+        delayEl.value + ' ms';
+
+    if (delayNode) {
+        delayNode.delayTime.value =
+            Number(delayEl.value) / 1000;
+    }
+});
+
+outputSel.addEventListener('change', applySink);
+
+inputSel.addEventListener('change', async () => {
+
+    if (running) {
+        cleanup();
+        await start();
+    }
+});
+
+if (navigator.mediaDevices &&
+    navigator.mediaDevices.addEventListener) {
+
+    navigator.mediaDevices.addEventListener(
+        'devicechange',
+        refreshDevices
+    );
+}
+
+refreshDevices();
+
 })();
 </script>
+
 </body>
 </html>
